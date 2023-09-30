@@ -1,0 +1,306 @@
+UBUNTU ANSIBLE
+
+CISCO
+* 
+config t
+ip domain-name rivanit.com
+username admin2 privilege 15 secret password
+crypto key generate rsa
+                 512->1024
+ip ssh version 2
+
+UBUNTU
+*ssh -o KexAlgorithms=+diffie-hellman-group14-sha1 -o HostKeyAlgorithms=+ssh-rsa admin@10.11.1.4
+*ssh -o KexAlgorithms=diffie-hellman-group1-sha1 -c aes256-cbc -o HostKeyAlgorithms=ssh-rsa admin@10.11.1.4
+
+
+*https://www.youtube.com/watch?v=Egnsb89T0Rs
+
+*ansible-galaxy collection install ansible.network
+
+*sudo apt-get install open-vm-tools-desktop -y
+
+
+UBUNTU ANSIBLE
+
+- sudo apt update
+- sudo apt upgrade
+- sudo apt install ansible -y
+- ansible --version
+- sudo apt purge ansible ansible-core
+- ansible --version
+- sudo apt install software-properties-common
+- sudo add-apt-repository ppa:ansible/ansible --yes --update
+- sudo apt install ansible-core
+- ansible --version
+- sudo su
+- ssh-keygen
+- ssh-copy-id admin@192.168.1.1
+
+
+
+*****************************************
+nano hosts
+
+[router]
+192.168.108.133
+
+[router:vars]
+
+ansible_user=admin
+ansible_password=password
+ansible_connection=network_cli
+ansible_port=22
+ansible_network_os=ios
+ansible_ssh_common_args="-o KexAlgorithms=+diffie-hellman-group14-sha1 -o HostKeyAlgorithms=+ssh-rsa"
+
+OR
+
+ansible_ssh_common_args="-o KexAlgorithms=+diffie-hellman-group11-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=aes256-cbc"
+
+
+*******************************************
+
+ansible router -m ios_command -a "commands='show ip int brief' "
+
+ansible router -m ping
+*******************************************
+Remove past SSH KEY
+
+ssh-keygen -f "/root/.ssh/known_hosts" -R "10.11.1.4"
+
+IF CORRECT
+
+# Host 10.11.1.4 found: line 2
+/root/.ssh/known_hosts updated.
+
+
+
+
+*******************************************
+
+working ssh
+
+---
+- name: Change Router Hostname to WAWA
+  hosts: router
+  gather_facts: no  # Disable fact gathering for network devices
+  tasks:
+    - name: Change Router Hostname
+      ios_config:  # Use ios_config module for Cisco devices
+        lines:
+          - hostname WAWA
+      vars:
+        ansible_network_os: ios  # Specify the network OS (Cisco IOS)
+
+*********************************************
+
+---
+- name: Configure IP Address on Interface Gi2
+  hosts: my_servers  # Replace with the appropriate host or group
+  gather_facts: no  # Disable fact gathering for network devices
+  tasks:
+    - name: Configure IP Address
+      ios_config:  # Use ios_config module for Cisco devices
+        lines:
+          - interface GigabitEthernet2
+          - ip address 192.168.1.1 255.255.255.0  # Replace with your desired IP and subnet mask
+        config: "present"
+      vars:
+        ansible_network_os: ios  # Specify the network OS (Cisco IOS)
+
+***********************************************
+
+---
+- name: Create Loopback Interfaces and Configure IP Addresses
+  hosts: my_servers  # Replace with the appropriate host or group
+  gather_facts: no  # Disable fact gathering for network devices
+  tasks:
+    - name: Create Loopback1
+      ios_config:  # Use ios_config module for Cisco devices
+        lines:
+          - interface Loopback1
+          - ip address 1.1.1.1 255.255.255.255  # IP address 1.1.1.1 with /32 subnet mask
+        config: "present"
+      vars:
+        ansible_network_os: ios  # Specify the network OS (Cisco IOS)
+
+    - name: Create Loopback2
+      ios_config:
+        lines:
+          - interface Loopback2
+          - ip address 2.2.2.2 255.255.255.255  # IP address 2.2.2.2 with /32 subnet mask
+        config: "present"
+      vars:
+        ansible_network_os: ios
+
+    - name: Create Loopback3
+      ios_config:
+        lines:
+          - interface Loopback3
+          - ip address 3.3.3.3 255.255.255.255  # IP address 3.3.3.3 with /32 subnet mask
+        config: "present"
+      vars:
+        ansible_network_os: ios
+
+********************************************************
+
+---
+- name: Delete Loopback Interfaces
+  hosts: my_servers  # Replace with the appropriate host or group
+  gather_facts: no  # Disable fact gathering for network devices
+  tasks:
+    - name: Delete Loopback1
+      ios_config:  # Use ios_config module for Cisco devices
+        lines:
+          - no interface Loopback1
+        config: "present"
+      vars:
+        ansible_network_os: ios  # Specify the network OS (Cisco IOS)
+
+    - name: Delete Loopback2
+      ios_config:
+        lines:
+          - no interface Loopback2
+        config: "present"
+      vars:
+        ansible_network_os: ios
+
+    - name: Delete Loopback3
+      ios_config:
+        lines:
+          - no interface Loopback3
+        config: "present"
+      vars:
+        ansible_network_os: ios
+
+************************************************************
+USING SSH
+---
+- name: Configure Loopback Interfaces
+  hosts: my_servers  # Replace with the appropriate host or group
+  gather_facts: no  # Disable fact gathering for network devices
+  become: yes  # Use privilege escalation to execute commands as a privileged user (if needed)
+
+  tasks:
+    - name: Create Loopback1
+      ios_config:
+        lines:
+          - interface Loopback1
+          - ip address 1.1.1.1 255.255.255.255  # Replace with your desired IP address and subnet mask
+        save_when: modified
+      vars:
+        ansible_network_os: ios  # Specify the network OS (Cisco IOS)
+        ansible_become_password: your_privileged_password  # Replace with the privileged user's password
+
+    - name: Create Loopback2
+      ios_config:
+        lines:
+          - interface Loopback2
+          - ip address 2.2.2.2 255.255.255.255  # Replace with your desired IP address and subnet mask
+        save_when: modified
+      vars:
+        ansible_network_os: ios
+        ansible_become_password: your_privileged_password
+
+    - name: Create Loopback3
+      ios_config:
+        lines:
+          - interface Loopback3
+          - ip address 3.3.3.3 255.255.255.255  # Replace with your desired IP address and subnet mask
+        save_when: modified
+      vars:
+        ansible_network_os: ios
+        ansible_become_password: your_privileged_password
+
+*********************************************************
+
+CORE BABA
+
+---
+- name: Change Router Hostname to "von"
+  hosts: my_servers  # Replace with the appropriate host or group
+  gather_facts: no  # Disable fact gathering for network devices
+  become: yes  # Use privilege escalation to execute commands as a privileged user (if needed)
+
+  tasks:
+    - name: Change Hostname to "von"
+      ios_config:
+        lines:
+          - hostname von
+        save_when: modified
+      vars:
+        ansible_network_os: ios  # Specify the network OS (Cisco IOS)
+        ansible_become_password: your_privileged_password  # Replace with the privileged user's password
+
+******************************************************************
+
+WORKING DHCP FOR SWITCH
+
+---
+- name: Configure VLANs and Interface Ports
+  hosts: my_router  # Replace with the appropriate host or group
+  gather_facts: no  # Disable fact gathering for network devices
+  become: yes  # Use privilege escalation to execute commands as a privileged user (if needed)
+
+  tasks:
+    - name: Create VLANs
+      ios_command:
+        commands:
+          - configure terminal
+          - vlan 10
+          - name WIFIVLAN
+          - exit
+          - vlan 50
+          - name IPCCTVLAN
+          - exit
+          - vlan 100
+          - name VOICEVLAN
+          - exit
+      vars:
+        ansible_network_os: ios  # Specify the network OS (Cisco IOS)
+      register: result_create_vlans
+
+    - name: Configure Interface Ports
+      ios_command:
+        commands:
+          - configure terminal
+          - interface FastEthernet0/2
+          - switchport mode access
+          - switchport access vlan 10
+          - exit
+          - interface FastEthernet0/4
+          - switchport mode access
+          - switchport access vlan 10
+          - exit
+          - interface FastEthernet0/6
+          - switchport mode access
+          - switchport access vlan 50
+          - exit
+          - interface FastEthernet0/8
+          - switchport mode access
+          - switchport access vlan 50
+          - exit
+          - interface FastEthernet0/3
+          - switchport mode access
+          - switchport access vlan 100
+          - exit
+          - interface FastEthernet0/5
+          - switchport mode access
+          - switchport access vlan 100
+          - exit
+          - interface FastEthernet0/7
+          - switchport mode access
+          - switchport access vlan 100
+          - exit
+      vars:
+        ansible_network_os: ios
+      register: result_configure_ports
+
+
+
+
+
+
+
+

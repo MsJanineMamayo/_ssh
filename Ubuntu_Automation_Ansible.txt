@@ -1,0 +1,234 @@
+UBUNTU ANSIBLE
+
+CISCO
+* 
+config t
+ip domain-name rivanit.com
+username admin2 privilege 15 secret password
+crypto key generate rsa
+                 512->1024
+ip ssh version 2
+
+UBUNTU
+*ssh -o KexAlgorithms=+diffie-hellman-group14-sha1 -o HostKeyAlgorithms=+ssh-rsa admin@10.11.1.4
+*ssh -o KexAlgorithms=diffie-hellman-group1-sha1 -c aes256-cbc -o HostKeyAlgorithms=ssh-rsa admin@10.11.1.4
+
+
+*https://www.youtube.com/watch?v=Egnsb89T0Rs
+
+*ansible-galaxy collection install ansible.network
+
+*sudo apt-get install open-vm-tools-desktop -y
+
+
+UBUNTU ANSIBLE
+
+- sudo apt update
+- sudo apt upgrade
+- sudo apt install ansible -y
+- ansible --version
+- sudo apt purge ansible ansible-core
+- ansible --version
+- sudo apt install software-properties-common
+- sudo add-apt-repository ppa:ansible/ansible --yes --update
+- sudo apt install ansible-core
+- ansible --version
+- sudo su
+- ssh-keygen
+- ssh-copy-id admin@192.168.1.1
+
+
+
+*****************************************
+nano hosts
+
+[router]
+192.168.108.133
+
+[router:vars]
+
+ansible_user=admin
+ansible_password=password
+ansible_connection=network_cli
+ansible_port=22
+ansible_network_os=ios
+ansible_ssh_common_args="-o KexAlgorithms=+diffie-hellman-group14-sha1 -o HostKeyAlgorithms=+ssh-rsa"
+
+OR
+
+ansible_ssh_common_args="-o KexAlgorithms=+diffie-hellman-group11-sha1 -o HostKeyAlgorithms=+ssh-rsa -o Ciphers=aes256-cbc"
+
+
+*******************************************
+
+ansible router -m ios_command -a "commands='show ip int brief' "
+
+ansible router -m ping
+
+*******************************************
+Remove past SSH KEY
+
+ssh-keygen -f "/root/.ssh/known_hosts" -R "10.11.1.4"
+
+IF CORRECT
+
+# Host 10.11.1.4 found: line 2
+/root/.ssh/known_hosts updated.
+
+
+
+*********************************************************
+
+#PASTE THE BASIC COMMAND FIRST COREBABA
+
+config t
+   hostname COREbaba11
+   enable secret password
+   service password-encryption
+   no logging console
+   no ip domain-lookup
+   username admin privilege 15 secret password
+   line console 0
+   exec-timeout 0 0
+   no login
+   line vty 0 14
+   transport input all
+   login local
+   Int Gi 0/1
+     no shutdown
+	  no switchport
+	  ip add 10.11.11.4 255.255.255.0
+   Int Vlan 1
+     no shutdown
+	 ip add 10.11.1.4 255.255.255.0
+	 description MGMTDATA
+   Int Vlan 10
+     no shutdown
+	 ip add 10.11.10.4 255.255.255.0
+	 description WIRELESS
+   Int Vlan 50
+     no shutdown
+	 ip add 10.11.50.4 255.255.255.0
+	 description IPCCTV
+   Int Vlan 100
+     no shutdown
+	 ip add 10.11.100.4 255.255.255.0
+	 description VOICEVLAN
+        end
+conf t
+ip routing 
+ip route 0.0.0.0 0.0.0.0 10.11.11.1
+end
+
+
+#ENABLE SSH
+
+config t
+ip domain-name rivanit.com
+username admin2 privilege 15 secret password
+crypto key generate rsa
+                 512->1024
+ip ssh version 2
+
+**********************************************************
+YML FILE
+
+---
+- name: Configure VLANs, DHCP, and Interface Ports
+  hosts: my_router  # Replace with the appropriate host or group
+  gather_facts: no  # Disable fact gathering for network devices
+  become: yes  # Use privilege escalation to execute commands as a privileged user (if needed)
+
+  tasks:
+    - name: Configure DHCP
+      ios_command:
+        commands:
+          - configure terminal
+          - ip dhcp excluded-address 10.11.1.1 10.11.1.100
+          - ip dhcp excluded-address 10.11.10.1 10.11.10.100
+          - ip dhcp excluded-address 10.11.50.1 10.11.50.100
+          - ip dhcp excluded-address 10.11.100.1 10.11.100.100
+          - ip dhcp pool MGMTDATA
+          - network 10.11.1.0 255.255.255.0
+          - default-router 10.11.1.4
+          - domain-name MGMTDATA.COM
+          - dns-server 10.11.1.10
+          - exit
+          - ip dhcp pool WIFIDATA
+          - network 10.11.10.0 255.255.255.0
+          - default-router 10.11.10.4
+          - domain-name WIFIDATA.COM
+          - dns-server 10.11.1.10
+          - exit
+          - ip dhcp pool IPCCTV
+          - network 10.11.50.0 255.255.255.0
+          - default-router 10.11.50.4
+          - domain-name IPCCTV.COM
+          - dns-server 10.11.1.10
+          - exit
+          - ip dhcp pool VOICEVLAN
+          - network 10.11.100.0 255.255.255.0
+          - default-router 10.11.100.4
+          - domain-name VOICEVLAN.COM
+          - dns-server 10.11.1.10
+          - option 150 ip 10.11.100.8
+          - exit
+      vars:
+        ansible_network_os: ios  # Specify the network OS (Cisco IOS)
+      register: result_configure_dhcp
+
+    - name: Create VLANs
+      ios_command:
+        commands:
+          - configure terminal
+          - vlan 10
+          - name WIFIVLAN
+          - exit
+          - vlan 50
+          - name IPCCTVLAN
+          - exit
+          - vlan 100
+          - name VOICEVLAN
+          - exit
+      vars:
+        ansible_network_os: ios  # Specify the network OS (Cisco IOS)
+      register: result_create_vlans
+
+    - name: Configure Interface Ports
+      ios_command:
+        commands:
+          - configure terminal
+          - interface FastEthernet0/2
+          - switchport mode access
+          - switchport access vlan 10
+          - exit
+          - interface FastEthernet0/4
+          - switchport mode access
+          - switchport access vlan 10
+          - exit
+          - interface FastEthernet0/6
+          - switchport mode access
+          - switchport access vlan 50
+          - exit
+          - interface FastEthernet0/8
+          - switchport mode access
+          - switchport access vlan 50
+          - exit
+          - interface FastEthernet0/3
+          - switchport mode access
+          - switchport access vlan 100
+          - exit
+          - interface FastEthernet0/5
+          - switchport mode access
+          - switchport access vlan 100
+          - exit
+          - interface FastEthernet0/7
+          - switchport mode access
+          - switchport access vlan 100
+          - exit
+      vars:
+        ansible_network_os: ios
+      register: result_configure_ports
+
+
+
